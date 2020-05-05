@@ -3,8 +3,8 @@
  * Arduino library to read from Victron devices using VE.Direct protocol.
  * Derived from Victron framehandler reference implementation.
  * 
- * 2020.04.14 - 0.0 - initial
- * 2020.04.18 - 0.1 - add buffers for private and public data
+ * 2020.05.05 - 0.2 - initial release
+ * 
  */
 
 #ifndef FRAMEHANDLER_H_
