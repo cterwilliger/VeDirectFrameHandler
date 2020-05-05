@@ -3,8 +3,7 @@
  * Arduino library to read from Victron devices using VE.Direct protocol.
  * Derived from Victron framehandler reference implementation.
  * 
- * 2020.04.14 - 0.0 - initial
- * 2020.04.18 - 0.1 - add buffers for private and public data
+ * 2020.05.05 - 0.2 - initial release
  * 
  */
  
@@ -126,11 +125,11 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 
 /*
  * textRxEvent
- * This function is called every time a new name/value is successfully parsed.  It writes the values to the private buffer.
+ * This function is called every time a new name/value is successfully parsed.  It writes the values to the temporary buffer.
  */
 void VeDirectFrameHandler::textRxEvent(char * mName, char * mValue) {
-    strcpy(tempName[frameIndex], mName);    // copy name to private buffer
-    strcpy(tempValue[frameIndex], mValue);  // copy value to private buffer
+    strcpy(tempName[frameIndex], mName);    // copy name to temporary buffer
+    strcpy(tempValue[frameIndex], mValue);  // copy value to temporary buffer
 	frameIndex++;
 }
 
@@ -164,7 +163,6 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
 	frameIndex = 0;	// reset frame
 }
 
-
 /*
  *	logE
  *  This function included for continuity and possible future use.	
@@ -176,7 +174,6 @@ void VeDirectFrameHandler::logE(char * module, char * error) {
     //Serial.println(error);
 	return;
 }
-
 
 /*
  *	hexRxEvent
