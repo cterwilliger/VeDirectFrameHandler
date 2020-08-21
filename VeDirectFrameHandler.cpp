@@ -28,11 +28,12 @@
  *  
  * 2020.05.05 - 0.2 - initial release
  * 2020.06.21 - 0.2 - add MIT license, no code changes
+ * 2020.08.20 - 0.3 - corrected #include reference
  * 
  */
  
 #include <Arduino.h>
-#include "framehandler.h"
+#include "VeDirectFrameHandler.h"
 
 #define MODULE "VE.Frame"	// Victron seems to use this to find out where logging messages were generated
 
