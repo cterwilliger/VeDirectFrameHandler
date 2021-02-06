@@ -36,22 +36,32 @@
 #include "VeDirectFrameHandler.h"
 
 #define MODULE "VE.Frame"	// Victron seems to use this to find out where logging messages were generated
+#define MAX_HEX_CALLBACK 10	// initial number - buffer is dynamically increased if necessary
 
 // The name of the record that contains the checksum.
 static constexpr char checksumTagName[] = "CHECKSUM";
 
 VeDirectFrameHandler::VeDirectFrameHandler() :
+        veName(),
+	veValue(),
+	frameIndex(0),
+	veEnd(0),
+	veHEnd(0),
 	//mStop(false),	// don't know what Victron uses this for, not using
+	logEF(0),
 	mState(IDLE),
 	mChecksum(0),
 	mTextPointer(0),
-    tempName(),
-    tempValue(),
-	frameIndex(0),
-	veName(),
-	veValue(),
-	veEnd(0)
+	tempName(),
+	tempValue(),
+	veHexCBList(0),
+	veCBEnd(0),
+	maxCB(MAX_HEX_CALLBACK) 
 {
+}
+
+VeDirectFrameHandler::~VeDirectFrameHandler() {
+  	if (veHexCBList) delete veHexCBList;
 }
 
 /*
@@ -63,7 +73,9 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 {
 	//if (mStop) return;
 	if ( (inbyte == ':') && (mState != CHECKSUM) ) {
+	  	vePushedState = mState; //hex frame can interrupt TEXT
 		mState = RECORD_HEX;
+		veHEnd = 0;
 	}
 	if (mState != RECORD_HEX) {
 		mChecksum += inbyte;
@@ -140,10 +152,8 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 		break;
 	}
 	case RECORD_HEX:
-		if (hexRxEvent(inbyte)) {
-			mChecksum = 0;
-			mState = IDLE;
-		}
+	        mState = hexRxEvent(inbyte);
+		if (mState != RECORD_HEX) mChecksum = 0;
 		break;
 	}
 }
@@ -192,18 +202,78 @@ void VeDirectFrameHandler::frameEndEvent(bool valid) {
  *	logE
  *  This function included for continuity and possible future use.	
  */
-void VeDirectFrameHandler::logE(char * module, char * error) {
+void VeDirectFrameHandler::logE(const char * module, const char * error) {
 	//Serial.print("MODULE: ");
     //Serial.println(module);
     //Serial.print("ERROR: ");
     //Serial.println(error);
-	return;
+  if (logEF)
+    (*logEF)(module,error);
+}
+
+/*
+ *	addHexCallback
+ *  This function record a new callback for hex frames
+ */
+void VeDirectFrameHandler::addHexCallback(hexCallback cb, void* data) {
+  if (veHexCBList==0) { // first time, allocate callbacks buffer
+    veHexCBList=new VeHexCB[maxCB];
+    veCBEnd=0;
+  }
+  else if (veCBEnd==maxCB) { // we need to resize the callbacks buffer, we double the max size
+    int newMax=maxCB*2;
+    VeHexCB* tmpb=new VeHexCB[newMax];
+    memcpy(tmpb, veHexCBList, maxCB*sizeof(VeHexCB));
+    maxCB=newMax;
+    delete veHexCBList;
+    veHexCBList=tmpb;
+  }
+  veHexCBList[veCBEnd].cb=cb;
+  veHexCBList[veCBEnd].data=data;
+  veCBEnd++;
+}
+
+/*
+ *	hexIsValid
+ *  This function compute checksum and validate hex frame
+ */
+#define ascii2hex(v) (v-48-(v>='A'?7:0))
+#define hex2byte(b) (ascii2hex(*(b)))*16+((ascii2hex(*(b+1))))
+static bool hexIsValid(const char* buffer, int size) {
+  uint8_t checksum=0x55-ascii2hex(buffer[1]);
+  for (int i=2; i<size; i+=2) checksum -= hex2byte(buffer+i);
+  return (checksum==0);
 }
 
 /*
  *	hexRxEvent
- *  This function included for continuity and possible future use.	
+ *  This function records hex answers or async messages
  */
-bool VeDirectFrameHandler::hexRxEvent(uint8_t inbyte) {
-	return true;		// stubbed out for future
+int VeDirectFrameHandler::hexRxEvent(uint8_t inbyte) {
+  int ret=RECORD_HEX; // default - continue recording until end of frame
+
+  switch (inbyte) {
+  case '\n':
+    // message ready - call all callbacks
+    if (hexIsValid(veHexBuffer,veHEnd)) {
+      for(int i=0; i<veCBEnd; i++) {
+	(*(veHexCBList[i].cb))(veHexBuffer, veHEnd, veHexCBList[i].data);
+      }
+    }
+    else {
+      logE(MODULE,"[CHECKSUM] Invalid hex frame");
+    }
+    // restore previous state
+    ret=vePushedState;
+    
+  default:
+    veHexBuffer[veHEnd++]=inbyte;
+    if (veHEnd>=hexBuffLen) { // oops -buffer overflow - something went wrong, we abort
+      logE(MODULE,"hexRx buffer overflow - aborting read");
+      veHEnd=0;
+      ret=IDLE;
+    }
+  }
+  
+  return ret;
 }
