@@ -153,7 +153,6 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
 	}
 	case RECORD_HEX:
 	        mState = hexRxEvent(inbyte);
-		if (mState != RECORD_HEX) mChecksum = 0;
 		break;
 	}
 }
