@@ -4,13 +4,14 @@
  * Derived from Victron framehandler reference implementation.
  * 
  * 2020.05.05 - 0.2 - initial release
+ * 2021.02.23 - 0.3 - change frameLen to 22 per VE.Direct Protocol version 3.30
  * 
  */
 
 #ifndef FRAMEHANDLER_H_
 #define FRAMEHANDLER_H_
 
-const byte frameLen = 18;                       // VE.Direct Protocol: max frame size is 18
+const byte frameLen = 22;                       // VE.Direct Protocol: max frame size is 18
 const byte nameLen = 9;                         // VE.Direct Protocol: max name size is 9 including /0
 const byte valueLen = 33;                       // VE.Direct Protocol: max value size is 33 including /0
 const byte buffLen = 40;                        // Maximum number of lines possible from the device. Current protocol shows this to be the BMV700 at 33 lines.
