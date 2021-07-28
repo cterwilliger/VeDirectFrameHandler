@@ -153,9 +153,11 @@ void VeDirectFrameHandler::rxData(uint8_t inbyte)
  * This function is called every time a new name/value is successfully parsed.  It writes the values to the temporary buffer.
  */
 void VeDirectFrameHandler::textRxEvent(char * mName, char * mValue) {
-    strcpy(tempName[frameIndex], mName);    // copy name to temporary buffer
-    strcpy(tempValue[frameIndex], mValue);  // copy value to temporary buffer
-	frameIndex++;
+    if (frameIndex < frameLen) {
+      strcpy(tempName[frameIndex], mName);    // copy name to temporary buffer
+      strcpy(tempValue[frameIndex], mValue);  // copy value to temporary buffer
+      frameIndex++;
+    }
 }
 
 /*
